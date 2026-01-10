@@ -1,8 +1,17 @@
-import { Wheat, Menu } from "lucide-react";
+import { Wheat, Menu, Globe } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { setLanguage, getLanguage, t } from "@/lib/i18n";
+import { useState, useEffect } from "react";
 
 export function Header() {
+  const [lang, setLangState] = useState(getLanguage());
+
+  useEffect(() => {
+    setLanguage(lang);
+  }, [lang]);
+
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container flex h-16 items-center justify-between">
@@ -12,7 +21,7 @@ export function Header() {
           </div>
           <div className="flex flex-col">
             <span className="font-display text-lg font-bold leading-tight">
-              AgriPlan<span className="text-accent">AI</span>
+              ViduthaVel<span className="text-accent">AI</span>
             </span>
             <span className="text-xs text-muted-foreground">
               Smart Harvest Logistics
@@ -31,6 +40,18 @@ export function Header() {
           <a href="#logistics" className="text-sm font-medium text-muted-foreground hover:text-primary transition-colors">
             Logistics
           </a>
+          <div className="flex items-center gap-2">
+            <Globe className="h-4 w-4 text-muted-foreground" />
+            <Select value={lang} onValueChange={(v) => setLangState(v as 'en' | 'hi')}>
+              <SelectTrigger className="w-20 h-8">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="en">English</SelectItem>
+                <SelectItem value="hi">हिंदी</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
           <div className="flex items-center gap-2">
             <div className="pulse-dot" />
             <span className="text-xs text-muted-foreground">AI Active</span>
