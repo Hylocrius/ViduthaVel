@@ -1,17 +1,16 @@
 import { AlertTriangle, TrendingUp, TrendingDown, Info, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { MarketData, CropType, StorageCondition } from "@/lib/mockData";
-import { MARKETS, DISCLAIMER_TEXT } from "@/lib/mockData";
+import { DISCLAIMER_TEXT } from "@/lib/mockData";
 
 interface RiskAnalysisPanelProps {
-  markets?: MarketData[];
+  markets: MarketData[];
   crop?: CropType;
   storage?: StorageCondition;
 }
 
 export function RiskAnalysisPanel({ markets, crop, storage }: RiskAnalysisPanelProps) {
-  const displayMarkets = markets && markets.length > 0 ? markets : MARKETS;
-  const highVolatilityMarkets = displayMarkets.filter(m => m.volatility === "high");
+  const highVolatilityMarkets = markets.filter(m => m.volatility === "high");
   const hasStorageRisk = storage && storage.lossMultiplier > 1;
   const isPerishable = crop && crop.shelfLife < 30;
 
@@ -98,7 +97,7 @@ export function RiskAnalysisPanel({ markets, crop, storage }: RiskAnalysisPanelP
       <div className="p-4 rounded-lg bg-muted/30">
         <h3 className="text-sm font-semibold mb-3">Market Demand Overview</h3>
         <div className="space-y-2">
-          {displayMarkets.map((market) => (
+          {markets.map((market) => (
             <div key={market.id} className="flex items-center justify-between text-sm">
               <span>{market.name}</span>
               <span className={cn(

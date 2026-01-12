@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { Header } from "@/components/Header";
 import { FarmContextForm, type FarmContext } from "@/components/FarmContextForm";
 import { AgentTracePanel } from "@/components/AgentTracePanel";
@@ -7,60 +7,87 @@ import { RecommendationCard } from "@/components/RecommendationCard";
 import { LogisticsChecklist } from "@/components/LogisticsChecklist";
 import { RiskAnalysisPanel } from "@/components/RiskAnalysisPanel";
 import { SensitivityAnalysis } from "@/components/SensitivityAnalysis";
-import { LivePricesTicker } from "@/components/LivePricesTicker";
-import { useMarketAnalysis } from "@/hooks/useMarketAnalysis";
-import { useLiveMarketPrices } from "@/hooks/useLiveMarketPrices";
-import { TRANSPORT_RATES } from "@/lib/mockData";
-import { Sprout, TrendingUp, Truck, BarChart3, Sparkles, Radio } from "lucide-react";
+import { 
+  MARKETS, 
+  TRANSPORT_RATES,
+  generateAgentSteps,
+  calculateRevenueComparison,
+  type AgentStep,
+  type RevenueComparison,
+} from "@/lib/mockData";
+import { Sprout, TrendingUp, Truck, BarChart3 } from "lucide-react";
 
 export default function Index() {
   const [farmContext, setFarmContext] = useState<FarmContext | null>(null);
-  const [selectedCropId, setSelectedCropId] = useState<string | null>(null);
-  
-  const {
-    markets: liveMarkets,
-    isLoading: isPricesLoading,
-    lastUpdated,
-    refreshPrices,
-  } = useLiveMarketPrices(selectedCropId);
+  const [agentSteps, setAgentSteps] = useState<AgentStep[]>([]);
+  const [comparisons, setComparisons] = useState<RevenueComparison[]>([]);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [recommendedIndex, setRecommendedIndex] = useState<number | undefined>();
 
-  const {
-    agentSteps,
-    comparisons,
-    isAnalyzing,
-    recommendedIndex,
-    bestOption,
-    secondBest,
-    riskWarning,
-    analyzeMarket,
-  } = useMarketAnalysis();
-
-  const handleAnalyze = async (context: FarmContext) => {
+  const handleAnalyze = useCallback(async (context: FarmContext) => {
     setFarmContext(context);
-    setSelectedCropId(context.crop.id);
-    
-    // Wait a moment for live prices to load if needed
-    await new Promise(resolve => setTimeout(resolve, 500));
-    await analyzeMarket(context, liveMarkets.length > 0 ? liveMarkets : undefined);
-  };
+    setIsAnalyzing(true);
+    setAgentSteps([]);
+    setComparisons([]);
+
+    // Simulate agent processing with delays
+    const steps = generateAgentSteps(
+      context.crop,
+      context.quantity,
+      MARKETS,
+      context.storageCondition
+    );
+
+    // Animate steps appearing
+    for (let i = 0; i < steps.length; i++) {
+      await new Promise(resolve => setTimeout(resolve, 400));
+      setAgentSteps(prev => [...prev, steps[i]]);
+    }
+
+    // Calculate all comparisons
+    const transport = TRANSPORT_RATES.find(t => t.capacity >= context.quantity) || TRANSPORT_RATES[0];
+    const allComparisons: RevenueComparison[] = [];
+
+    for (const market of MARKETS) {
+      allComparisons.push(
+        calculateRevenueComparison(
+          context.crop,
+          context.quantity,
+          market,
+          transport,
+          context.storageCondition,
+          "now"
+        ),
+        calculateRevenueComparison(
+          context.crop,
+          context.quantity,
+          market,
+          transport,
+          context.storageCondition,
+          "7days"
+        )
+      );
+    }
+
+    // Find best option
+    const bestIndex = allComparisons.reduce(
+      (best, current, index) => current.netRevenue > allComparisons[best].netRevenue ? index : best,
+      0
+    );
+
+    setComparisons(allComparisons);
+    setRecommendedIndex(bestIndex);
+    setIsAnalyzing(false);
+  }, []);
+
+  const bestOption = recommendedIndex !== undefined ? comparisons[recommendedIndex] : null;
+  const secondBest = comparisons
+    .filter((_, i) => i !== recommendedIndex)
+    .sort((a, b) => b.netRevenue - a.netRevenue)[0];
 
   const selectedTransport = farmContext 
     ? TRANSPORT_RATES.find(t => t.capacity >= farmContext.quantity) || TRANSPORT_RATES[0]
     : TRANSPORT_RATES[0];
-
-  // Convert live markets for risk analysis panel
-  const marketsForRisk = liveMarkets.length > 0 
-    ? liveMarkets.map(m => ({
-        id: m.id,
-        name: m.name,
-        location: m.location,
-        distance: m.distance,
-        currentPrice: m.currentPrice,
-        projectedPrice7Days: m.projectedPrice7Days,
-        volatility: m.volatility,
-        demand: m.demand,
-      }))
-    : [];
 
   return (
     <div className="min-h-screen bg-background">
@@ -70,14 +97,14 @@ export default function Index() {
         {/* Hero section */}
         <section className="text-center py-8 animate-fade-in">
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium mb-4">
-            <Sparkles className="h-4 w-4" />
-            Real AI-Powered Analysis
+            <span className="pulse-dot" />
+            AI-Powered Decision Support
           </div>
           <h1 className="font-display text-3xl sm:text-4xl lg:text-5xl font-bold text-balance gradient-text mb-4">
             Maximize Your Harvest Returns
           </h1>
           <p className="text-muted-foreground text-lg max-w-2xl mx-auto text-balance">
-            Our multi-agent AI analyzes <strong>live market prices</strong>, transport costs, and storage losses 
+            Our multi-agent AI analyzes market prices, transport costs, and storage losses 
             to recommend the optimal time and place to sell your crops.
           </p>
         </section>
@@ -85,10 +112,10 @@ export default function Index() {
         {/* Stats row */}
         <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[
-            { icon: Radio, label: "Live Markets", value: liveMarkets.length > 0 ? `${liveMarkets.length}` : "6+", color: "text-success" },
-            { icon: TrendingUp, label: "Real-time Prices", value: "Yes", color: "text-primary" },
+            { icon: Sprout, label: "Crops Tracked", value: "6+", color: "text-primary" },
+            { icon: TrendingUp, label: "Markets Analyzed", value: "4", color: "text-success" },
             { icon: Truck, label: "Transport Options", value: "4", color: "text-agent-logistics" },
-            { icon: BarChart3, label: "AI Factors", value: "15+", color: "text-accent" },
+            { icon: BarChart3, label: "Factors Considered", value: "15+", color: "text-accent" },
           ].map((stat, i) => (
             <div key={i} className="stat-card text-center animate-fade-in" style={{ animationDelay: `${i * 100}ms` }}>
               <stat.icon className={`h-6 w-6 mx-auto mb-2 ${stat.color}`} />
@@ -97,17 +124,6 @@ export default function Index() {
             </div>
           ))}
         </section>
-
-        {/* Live prices ticker */}
-        {liveMarkets.length > 0 && selectedCropId && (
-          <LivePricesTicker
-            markets={liveMarkets}
-            isLoading={isPricesLoading}
-            lastUpdated={lastUpdated}
-            onRefresh={refreshPrices}
-            selectedCrop={farmContext?.crop.name || selectedCropId}
-          />
-        )}
 
         {/* Main form */}
         <section id="dashboard" className="animate-fade-in" style={{ animationDelay: "200ms" }}>
@@ -127,11 +143,11 @@ export default function Index() {
                   <RecommendationCard 
                     bestOption={bestOption}
                     secondBest={secondBest}
-                    volatilityWarning={riskWarning || (
+                    volatilityWarning={
                       bestOption.market.volatility === "high" 
                         ? `${bestOption.market.name} has high price volatility. Consider monitoring prices closely.`
                         : undefined
-                    )}
+                    }
                   />
                 </div>
               )}
@@ -170,7 +186,7 @@ export default function Index() {
               </div>
               <div className="animate-fade-in" style={{ animationDelay: "500ms" }}>
                 <RiskAnalysisPanel 
-                  markets={marketsForRisk.length > 0 ? marketsForRisk : undefined}
+                  markets={MARKETS}
                   crop={farmContext?.crop}
                   storage={farmContext?.storageCondition}
                 />
@@ -185,11 +201,11 @@ export default function Index() {
             Built for <span className="font-semibold">AI Ignite National Gen AI Hackathon</span>
           </p>
           <p>
-            Powered by <span className="font-semibold text-primary">Lovable AI</span> • Live prices simulated (Agmarknet API integration ready)
+            Data sources: FAO Post-Harvest Guidelines, ICAR Research Publications
           </p>
           <p className="mt-4 text-xs max-w-xl mx-auto">
-            Disclaimer: This tool provides AI-generated estimates. Live price integration uses simulated data for demonstration.
-            In production, connect to data.gov.in or Agmarknet portal for real market prices.
+            Disclaimer: This tool provides estimates based on simulated data. 
+            Always verify current market prices before making selling decisions.
           </p>
         </footer>
       </main>
