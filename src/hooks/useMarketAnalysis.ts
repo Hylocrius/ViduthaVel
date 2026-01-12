@@ -1,13 +1,11 @@
 import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { 
-  MARKETS, 
   TRANSPORT_RATES,
-  type CropType,
-  type StorageCondition,
   type MarketData,
 } from "@/lib/mockData";
 import type { FarmContext } from "@/components/FarmContextForm";
+import type { LiveMarketData } from "@/hooks/useLiveMarketPrices";
 import { toast } from "sonner";
 
 export interface AIAgentStep {
@@ -65,7 +63,7 @@ export function useMarketAnalysis() {
   const [recommendedIndex, setRecommendedIndex] = useState<number | undefined>();
   const [riskWarning, setRiskWarning] = useState<string | undefined>();
 
-  const analyzeMarket = useCallback(async (context: FarmContext) => {
+  const analyzeMarket = useCallback(async (context: FarmContext, liveMarkets?: LiveMarketData[]) => {
     setIsAnalyzing(true);
     setAgentSteps([]);
     setComparisons([]);
@@ -81,6 +79,20 @@ export function useMarketAnalysis() {
         timestamp: new Date(),
       }]);
 
+      // Use live markets if available, otherwise use static data
+      const marketsToUse = liveMarkets && liveMarkets.length > 0 
+        ? liveMarkets.map(m => ({
+            id: m.id,
+            name: m.name,
+            location: m.location,
+            distance: m.distance,
+            currentPrice: m.currentPrice,
+            projectedPrice7Days: m.projectedPrice7Days,
+            volatility: m.volatility,
+            demand: m.demand,
+          }))
+        : [];
+
       const { data, error } = await supabase.functions.invoke("analyze-market", {
         body: {
           farmContext: {
@@ -89,7 +101,7 @@ export function useMarketAnalysis() {
             location: context.location,
             storageCondition: context.storageCondition,
           },
-          markets: MARKETS,
+          markets: marketsToUse.length > 0 ? marketsToUse : undefined,
           transportRates: TRANSPORT_RATES,
         },
       });
@@ -117,7 +129,9 @@ export function useMarketAnalysis() {
 
       // Transform comparisons to include full market data
       const transformedComparisons: AIRevenueComparison[] = analysis.comparisons.map(comp => {
-        const market = MARKETS.find(m => m.id === comp.marketId) || {
+        // Try to find in live markets first, then create from comparison data
+        const liveMarket = liveMarkets?.find(m => m.id === comp.marketId);
+        const market: MarketData = liveMarket || {
           id: comp.marketId,
           name: comp.marketName,
           location: comp.location,
