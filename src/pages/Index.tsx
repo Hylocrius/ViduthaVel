@@ -7,12 +7,23 @@ import { RecommendationCard } from "@/components/RecommendationCard";
 import { LogisticsChecklist } from "@/components/LogisticsChecklist";
 import { RiskAnalysisPanel } from "@/components/RiskAnalysisPanel";
 import { SensitivityAnalysis } from "@/components/SensitivityAnalysis";
+import { LivePricesTicker } from "@/components/LivePricesTicker";
 import { useMarketAnalysis } from "@/hooks/useMarketAnalysis";
-import { MARKETS, TRANSPORT_RATES } from "@/lib/mockData";
-import { Sprout, TrendingUp, Truck, BarChart3, Sparkles } from "lucide-react";
+import { useLiveMarketPrices } from "@/hooks/useLiveMarketPrices";
+import { TRANSPORT_RATES } from "@/lib/mockData";
+import { Sprout, TrendingUp, Truck, BarChart3, Sparkles, Radio } from "lucide-react";
 
 export default function Index() {
   const [farmContext, setFarmContext] = useState<FarmContext | null>(null);
+  const [selectedCropId, setSelectedCropId] = useState<string | null>(null);
+  
+  const {
+    markets: liveMarkets,
+    isLoading: isPricesLoading,
+    lastUpdated,
+    refreshPrices,
+  } = useLiveMarketPrices(selectedCropId);
+
   const {
     agentSteps,
     comparisons,
@@ -26,12 +37,30 @@ export default function Index() {
 
   const handleAnalyze = async (context: FarmContext) => {
     setFarmContext(context);
-    await analyzeMarket(context);
+    setSelectedCropId(context.crop.id);
+    
+    // Wait a moment for live prices to load if needed
+    await new Promise(resolve => setTimeout(resolve, 500));
+    await analyzeMarket(context, liveMarkets.length > 0 ? liveMarkets : undefined);
   };
 
   const selectedTransport = farmContext 
     ? TRANSPORT_RATES.find(t => t.capacity >= farmContext.quantity) || TRANSPORT_RATES[0]
     : TRANSPORT_RATES[0];
+
+  // Convert live markets for risk analysis panel
+  const marketsForRisk = liveMarkets.length > 0 
+    ? liveMarkets.map(m => ({
+        id: m.id,
+        name: m.name,
+        location: m.location,
+        distance: m.distance,
+        currentPrice: m.currentPrice,
+        projectedPrice7Days: m.projectedPrice7Days,
+        volatility: m.volatility,
+        demand: m.demand,
+      }))
+    : [];
 
   return (
     <div className="min-h-screen bg-background">
@@ -48,7 +77,7 @@ export default function Index() {
             Maximize Your Harvest Returns
           </h1>
           <p className="text-muted-foreground text-lg max-w-2xl mx-auto text-balance">
-            Our multi-agent AI analyzes market prices, transport costs, and storage losses 
+            Our multi-agent AI analyzes <strong>live market prices</strong>, transport costs, and storage losses 
             to recommend the optimal time and place to sell your crops.
           </p>
         </section>
@@ -56,8 +85,8 @@ export default function Index() {
         {/* Stats row */}
         <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {[
-            { icon: Sprout, label: "Crops Tracked", value: "6+", color: "text-primary" },
-            { icon: TrendingUp, label: "Markets Analyzed", value: "4", color: "text-success" },
+            { icon: Radio, label: "Live Markets", value: liveMarkets.length > 0 ? `${liveMarkets.length}` : "6+", color: "text-success" },
+            { icon: TrendingUp, label: "Real-time Prices", value: "Yes", color: "text-primary" },
             { icon: Truck, label: "Transport Options", value: "4", color: "text-agent-logistics" },
             { icon: BarChart3, label: "AI Factors", value: "15+", color: "text-accent" },
           ].map((stat, i) => (
@@ -68,6 +97,17 @@ export default function Index() {
             </div>
           ))}
         </section>
+
+        {/* Live prices ticker */}
+        {liveMarkets.length > 0 && selectedCropId && (
+          <LivePricesTicker
+            markets={liveMarkets}
+            isLoading={isPricesLoading}
+            lastUpdated={lastUpdated}
+            onRefresh={refreshPrices}
+            selectedCrop={farmContext?.crop.name || selectedCropId}
+          />
+        )}
 
         {/* Main form */}
         <section id="dashboard" className="animate-fade-in" style={{ animationDelay: "200ms" }}>
@@ -130,7 +170,7 @@ export default function Index() {
               </div>
               <div className="animate-fade-in" style={{ animationDelay: "500ms" }}>
                 <RiskAnalysisPanel 
-                  markets={MARKETS}
+                  markets={marketsForRisk.length > 0 ? marketsForRisk : undefined}
                   crop={farmContext?.crop}
                   storage={farmContext?.storageCondition}
                 />
@@ -145,11 +185,11 @@ export default function Index() {
             Built for <span className="font-semibold">AI Ignite National Gen AI Hackathon</span>
           </p>
           <p>
-            Powered by <span className="font-semibold text-primary">Lovable AI</span> • Data sources: FAO Post-Harvest Guidelines, ICAR Research Publications
+            Powered by <span className="font-semibold text-primary">Lovable AI</span> • Live prices simulated (Agmarknet API integration ready)
           </p>
           <p className="mt-4 text-xs max-w-xl mx-auto">
-            Disclaimer: This tool provides AI-generated estimates based on market data. 
-            Always verify current market prices before making selling decisions.
+            Disclaimer: This tool provides AI-generated estimates. Live price integration uses simulated data for demonstration.
+            In production, connect to data.gov.in or Agmarknet portal for real market prices.
           </p>
         </footer>
       </main>
