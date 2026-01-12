@@ -7,7 +7,6 @@ import { RecommendationCard } from "@/components/RecommendationCard";
 import { LogisticsChecklist } from "@/components/LogisticsChecklist";
 import { RiskAnalysisPanel } from "@/components/RiskAnalysisPanel";
 import { SensitivityAnalysis } from "@/components/SensitivityAnalysis";
-import { DisclaimerPanel } from "@/components/DisclaimerPanel";
 import { 
   MARKETS, 
   TRANSPORT_RATES,
@@ -196,11 +195,6 @@ export default function Index() {
           </section>
         )}
 
-        {/* Disclaimer */}
-        <section className="animate-fade-in" style={{ animationDelay: "600ms" }}>
-          <DisclaimerPanel />
-        </section>
-
         {/* Footer */}
         <footer className="border-t border-border pt-8 pb-12 text-center text-sm text-muted-foreground">
           <p className="mb-2">
@@ -208,6 +202,10 @@ export default function Index() {
           </p>
           <p>
             Data sources: FAO Post-Harvest Guidelines, ICAR Research Publications
+          </p>
+          <p className="mt-4 text-xs max-w-xl mx-auto">
+            Disclaimer: This tool provides estimates based on simulated data. 
+            Always verify current market prices before making selling decisions.
           </p>
         </footer>
       </main>
