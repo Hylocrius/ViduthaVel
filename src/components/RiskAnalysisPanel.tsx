@@ -1,12 +1,11 @@
 import { AlertTriangle, TrendingUp, TrendingDown, Info, ExternalLink } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { MarketData, CropType, StorageCondition } from "@/lib/mockData";
-import { DISCLAIMER_TEXT } from "@/lib/mockData";
+import type { MarketData, CropInfo, StorageInfo } from "@/hooks/useMarketAnalysis";
 
 interface RiskAnalysisPanelProps {
   markets: MarketData[];
-  crop?: CropType;
-  storage?: StorageCondition;
+  crop?: CropInfo | null;
+  storage?: StorageInfo | null;
 }
 
 export function RiskAnalysisPanel({ markets, crop, storage }: RiskAnalysisPanelProps) {
@@ -48,7 +47,7 @@ export function RiskAnalysisPanel({ markets, crop, storage }: RiskAnalysisPanelP
         </div>
         <div>
           <h2 className="font-display font-semibold">Risk Analysis</h2>
-          <p className="text-xs text-muted-foreground">Factors affecting your decision</p>
+          <p className="text-xs text-muted-foreground">Real-time risk factors</p>
         </div>
       </div>
 
@@ -94,24 +93,26 @@ export function RiskAnalysisPanel({ markets, crop, storage }: RiskAnalysisPanelP
       </div>
 
       {/* Market demand overview */}
-      <div className="p-4 rounded-lg bg-muted/30">
-        <h3 className="text-sm font-semibold mb-3">Market Demand Overview</h3>
-        <div className="space-y-2">
-          {markets.map((market) => (
-            <div key={market.id} className="flex items-center justify-between text-sm">
-              <span>{market.name}</span>
-              <span className={cn(
-                "px-2 py-0.5 rounded-full text-xs font-medium",
-                market.demand === "high" && "bg-success/20 text-success",
-                market.demand === "medium" && "bg-warning/20 text-warning-foreground",
-                market.demand === "low" && "bg-muted text-muted-foreground"
-              )}>
-                {market.demand} demand
-              </span>
-            </div>
-          ))}
+      {markets.length > 0 && (
+        <div className="p-4 rounded-lg bg-muted/30">
+          <h3 className="text-sm font-semibold mb-3">Market Demand Overview</h3>
+          <div className="space-y-2">
+            {markets.map((market) => (
+              <div key={market.id} className="flex items-center justify-between text-sm">
+                <span>{market.name}</span>
+                <span className={cn(
+                  "px-2 py-0.5 rounded-full text-xs font-medium",
+                  market.demand === "high" && "bg-success/20 text-success",
+                  market.demand === "medium" && "bg-warning/20 text-warning-foreground",
+                  market.demand === "low" && "bg-muted text-muted-foreground"
+                )}>
+                  {market.demand} demand
+                </span>
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Disclaimer */}
       <div className="p-4 rounded-lg bg-muted/50 border border-border">
@@ -120,7 +121,7 @@ export function RiskAnalysisPanel({ markets, crop, storage }: RiskAnalysisPanelP
           <div className="text-xs text-muted-foreground space-y-2">
             <p className="font-medium">Important Disclaimer</p>
             <p>
-              This tool provides estimates based on simulated data. Actual results may vary due to 
+              This tool provides AI-generated estimates based on real-time market analysis. Actual results may vary due to 
               market fluctuations, weather, and local conditions.
             </p>
             <div className="flex items-center gap-1 text-primary">

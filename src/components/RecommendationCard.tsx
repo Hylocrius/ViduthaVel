@@ -1,10 +1,10 @@
 import { CheckCircle2, AlertTriangle, ArrowRight, Calendar, MapPin } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { RevenueComparison, MarketData } from "@/lib/mockData";
+import type { AIRevenueComparison } from "@/hooks/useMarketAnalysis";
 
 interface RecommendationCardProps {
-  bestOption: RevenueComparison;
-  secondBest?: RevenueComparison;
+  bestOption: AIRevenueComparison;
+  secondBest?: AIRevenueComparison;
   volatilityWarning?: string;
 }
 

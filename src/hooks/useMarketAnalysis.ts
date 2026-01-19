@@ -1,13 +1,5 @@
 import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { 
-  MARKETS, 
-  TRANSPORT_RATES,
-  type CropType,
-  type StorageCondition,
-  type MarketData,
-} from "@/lib/mockData";
-import type { FarmContext } from "@/components/FarmContextForm";
 import { toast } from "sonner";
 
 export interface AIAgentStep {
@@ -16,6 +8,36 @@ export interface AIAgentStep {
   reasoning: string;
   timestamp: Date;
   data?: Record<string, unknown>;
+}
+
+export interface MarketData {
+  id: string;
+  name: string;
+  location: string;
+  distance: number;
+  currentPrice: number;
+  projectedPrice7Days: number;
+  volatility: "low" | "medium" | "high";
+  demand: "low" | "medium" | "high";
+}
+
+export interface CropInfo {
+  name: string;
+  shelfLife: number;
+  lossRatePerDay: number;
+  basePrice: number;
+}
+
+export interface StorageInfo {
+  type: string;
+  lossMultiplier: number;
+  costPerDay: number;
+}
+
+export interface TransportInfo {
+  vehicleType: string;
+  ratePerKm: number;
+  capacity: number;
 }
 
 export interface AIRevenueComparison {
@@ -29,7 +51,24 @@ export interface AIRevenueComparison {
   profitMargin: number;
 }
 
+export interface MarketInsights {
+  seasonalTrend: string;
+  demandOutlook: string;
+  priceVolatility: string;
+}
+
+export interface FarmContextInput {
+  crop: string;
+  quantity: number;
+  location: string;
+  storageType: string;
+}
+
 interface AIAnalysisResponse {
+  generatedMarkets: MarketData[];
+  cropInfo: CropInfo;
+  storageInfo: StorageInfo;
+  transportInfo: TransportInfo;
   agentSteps: Array<{
     agent: "market" | "logistics" | "storage" | "supervisor";
     action: string;
@@ -56,6 +95,7 @@ interface AIAnalysisResponse {
     reasoning: string;
     riskWarning?: string;
   };
+  marketInsights?: MarketInsights;
 }
 
 export function useMarketAnalysis() {
@@ -64,20 +104,30 @@ export function useMarketAnalysis() {
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [recommendedIndex, setRecommendedIndex] = useState<number | undefined>();
   const [riskWarning, setRiskWarning] = useState<string | undefined>();
+  const [markets, setMarkets] = useState<MarketData[]>([]);
+  const [cropInfo, setCropInfo] = useState<CropInfo | null>(null);
+  const [storageInfo, setStorageInfo] = useState<StorageInfo | null>(null);
+  const [transportInfo, setTransportInfo] = useState<TransportInfo | null>(null);
+  const [marketInsights, setMarketInsights] = useState<MarketInsights | null>(null);
 
-  const analyzeMarket = useCallback(async (context: FarmContext) => {
+  const analyzeMarket = useCallback(async (context: FarmContextInput) => {
     setIsAnalyzing(true);
     setAgentSteps([]);
     setComparisons([]);
     setRecommendedIndex(undefined);
     setRiskWarning(undefined);
+    setMarkets([]);
+    setCropInfo(null);
+    setStorageInfo(null);
+    setTransportInfo(null);
+    setMarketInsights(null);
 
     try {
       // Add initial step to show we're starting
       setAgentSteps([{
         agent: "supervisor",
-        action: "Initializing multi-agent analysis",
-        reasoning: "Starting AI-powered market analysis for your farm context...",
+        action: "Initializing real-time market analysis",
+        reasoning: "Connecting to AI-powered market intelligence system to generate live market data...",
         timestamp: new Date(),
       }]);
 
@@ -87,10 +137,8 @@ export function useMarketAnalysis() {
             crop: context.crop,
             quantity: context.quantity,
             location: context.location,
-            storageCondition: context.storageCondition,
+            storageType: context.storageType,
           },
-          markets: MARKETS,
-          transportRates: TRANSPORT_RATES,
         },
       });
 
@@ -103,6 +151,13 @@ export function useMarketAnalysis() {
       }
 
       const analysis = data as AIAnalysisResponse;
+
+      // Store generated data
+      setMarkets(analysis.generatedMarkets || []);
+      setCropInfo(analysis.cropInfo || null);
+      setStorageInfo(analysis.storageInfo || null);
+      setTransportInfo(analysis.transportInfo || null);
+      setMarketInsights(analysis.marketInsights || null);
 
       // Animate agent steps appearing
       const steps: AIAgentStep[] = analysis.agentSteps.map((step, index) => ({
@@ -117,7 +172,7 @@ export function useMarketAnalysis() {
 
       // Transform comparisons to include full market data
       const transformedComparisons: AIRevenueComparison[] = analysis.comparisons.map(comp => {
-        const market = MARKETS.find(m => m.id === comp.marketId) || {
+        const market = analysis.generatedMarkets?.find(m => m.id === comp.marketId) || {
           id: comp.marketId,
           name: comp.marketName,
           location: comp.location,
@@ -163,7 +218,7 @@ export function useMarketAnalysis() {
 
       setRiskWarning(analysis.recommendation.riskWarning);
       
-      toast.success("AI analysis complete!", {
+      toast.success("Real-time analysis complete!", {
         description: analysis.recommendation.reasoning.slice(0, 100) + "...",
       });
 
@@ -199,5 +254,11 @@ export function useMarketAnalysis() {
     secondBest,
     riskWarning,
     analyzeMarket,
+    // New real-time data
+    markets,
+    cropInfo,
+    storageInfo,
+    transportInfo,
+    marketInsights,
   };
 }

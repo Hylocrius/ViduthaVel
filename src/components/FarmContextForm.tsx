@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { CROPS, STORAGE_CONDITIONS, type CropType, type StorageCondition } from "@/lib/mockData";
 
 interface FarmContextFormProps {
   onSubmit: (data: FarmContext) => void;
@@ -12,34 +11,55 @@ interface FarmContextFormProps {
 }
 
 export interface FarmContext {
-  crop: CropType;
+  crop: string;
   quantity: number;
   location: string;
-  storageCondition: StorageCondition;
+  storageType: string;
 }
+
+// Common Indian crops for the dropdown
+const CROP_OPTIONS = [
+  { id: "wheat", name: "Wheat", nameHindi: "गेहूं" },
+  { id: "rice", name: "Rice (Paddy)", nameHindi: "धान" },
+  { id: "tomato", name: "Tomato", nameHindi: "टमाटर" },
+  { id: "onion", name: "Onion", nameHindi: "प्याज" },
+  { id: "potato", name: "Potato", nameHindi: "आलू" },
+  { id: "soybean", name: "Soybean", nameHindi: "सोयाबीन" },
+  { id: "maize", name: "Maize", nameHindi: "मक्का" },
+  { id: "cotton", name: "Cotton", nameHindi: "कपास" },
+  { id: "sugarcane", name: "Sugarcane", nameHindi: "गन्ना" },
+  { id: "groundnut", name: "Groundnut", nameHindi: "मूंगफली" },
+];
+
+// Storage options
+const STORAGE_OPTIONS = [
+  { type: "Open Air", description: "No additional storage cost, but higher losses" },
+  { type: "Covered Shed", description: "Basic protection from weather" },
+  { type: "Warehouse", description: "Temperature controlled, lower losses" },
+  { type: "Cold Storage", description: "Best for perishables, minimal losses" },
+];
 
 export function FarmContextForm({ onSubmit, isLoading }: FarmContextFormProps) {
   const [cropId, setCropId] = useState<string>("");
   const [quantity, setQuantity] = useState<string>("50");
   const [location, setLocation] = useState<string>("");
-  const [storageId, setStorageId] = useState<string>("");
+  const [storageType, setStorageType] = useState<string>("");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const crop = CROPS.find(c => c.id === cropId);
-    const storage = STORAGE_CONDITIONS.find(s => s.type === storageId);
+    const selectedCrop = CROP_OPTIONS.find(c => c.id === cropId);
     
-    if (crop && storage && quantity && location) {
+    if (selectedCrop && storageType && quantity && location) {
       onSubmit({
-        crop,
+        crop: selectedCrop.name,
         quantity: Number(quantity),
         location,
-        storageCondition: storage,
+        storageType,
       });
     }
   };
 
-  const isValid = cropId && quantity && location && storageId;
+  const isValid = cropId && quantity && location && storageType;
 
   return (
     <form onSubmit={handleSubmit} className="card-elevated p-6 space-y-6">
@@ -49,7 +69,7 @@ export function FarmContextForm({ onSubmit, isLoading }: FarmContextFormProps) {
         </div>
         <div>
           <h2 className="font-display font-semibold">Farm Context</h2>
-          <p className="text-xs text-muted-foreground">Tell us about your harvest</p>
+          <p className="text-xs text-muted-foreground">Tell us about your harvest for real-time analysis</p>
         </div>
       </div>
 
@@ -63,7 +83,7 @@ export function FarmContextForm({ onSubmit, isLoading }: FarmContextFormProps) {
               <SelectValue placeholder="Select crop" />
             </SelectTrigger>
             <SelectContent>
-              {CROPS.map((crop) => (
+              {CROP_OPTIONS.map((crop) => (
                 <SelectItem key={crop.id} value={crop.id}>
                   <span className="flex items-center gap-2">
                     {crop.name} <span className="text-muted-foreground">({crop.nameHindi})</span>
@@ -104,7 +124,7 @@ export function FarmContextForm({ onSubmit, isLoading }: FarmContextFormProps) {
               value={location}
               onChange={(e) => setLocation(e.target.value)}
               className="pl-10"
-              placeholder="Village, District"
+              placeholder="Village, District, State"
             />
           </div>
         </div>
@@ -113,7 +133,7 @@ export function FarmContextForm({ onSubmit, isLoading }: FarmContextFormProps) {
           <Label htmlFor="storage" className="text-sm font-medium">
             Storage Condition
           </Label>
-          <Select value={storageId} onValueChange={setStorageId}>
+          <Select value={storageType} onValueChange={setStorageType}>
             <SelectTrigger id="storage" className="w-full">
               <div className="flex items-center gap-2">
                 <Warehouse className="h-4 w-4 text-muted-foreground" />
@@ -121,7 +141,7 @@ export function FarmContextForm({ onSubmit, isLoading }: FarmContextFormProps) {
               </div>
             </SelectTrigger>
             <SelectContent>
-              {STORAGE_CONDITIONS.map((storage) => (
+              {STORAGE_OPTIONS.map((storage) => (
                 <SelectItem key={storage.type} value={storage.type}>
                   <div className="flex flex-col">
                     <span>{storage.type}</span>
@@ -142,10 +162,10 @@ export function FarmContextForm({ onSubmit, isLoading }: FarmContextFormProps) {
         {isLoading ? (
           <span className="flex items-center gap-2">
             <span className="h-4 w-4 animate-spin rounded-full border-2 border-primary-foreground border-t-transparent" />
-            Analyzing...
+            Fetching Real-Time Data...
           </span>
         ) : (
-          "Analyze Markets & Get Recommendation"
+          "Get Real-Time Market Analysis"
         )}
       </Button>
     </form>
