@@ -2,12 +2,27 @@ import { useState } from "react";
 import { ClipboardList, Check, Truck, FileText, Package, Store } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Checkbox } from "@/components/ui/checkbox";
-import { LOGISTICS_CHECKLIST, TRANSPORT_RATES, type MarketData } from "@/lib/mockData";
+import type { MarketData } from "@/hooks/useMarketAnalysis";
 
 interface LogisticsChecklistProps {
   market?: MarketData;
   quantity?: number;
 }
+
+const LOGISTICS_CHECKLIST = [
+  { id: 1, category: "Documentation", item: "Farmer ID / Aadhaar Card", required: true },
+  { id: 2, category: "Documentation", item: "Land ownership / lease documents", required: true },
+  { id: 3, category: "Documentation", item: "Previous sale receipts (if any)", required: false },
+  { id: 4, category: "Packaging", item: "Jute/PP bags (50kg each)", required: true },
+  { id: 5, category: "Packaging", item: "Weighing machine / spring balance", required: true },
+  { id: 6, category: "Packaging", item: "Rope/twine for securing load", required: true },
+  { id: 7, category: "Transport", item: "Vehicle booking confirmation", required: true },
+  { id: 8, category: "Transport", item: "Driver contact number", required: true },
+  { id: 9, category: "Transport", item: "Fuel/toll money", required: true },
+  { id: 10, category: "Market", item: "Market timing confirmation", required: true },
+  { id: 11, category: "Market", item: "Commission agent contact", required: false },
+  { id: 12, category: "Market", item: "Bank account details for payment", required: true },
+];
 
 const categoryIcons: Record<string, React.ElementType> = {
   Documentation: FileText,
@@ -39,9 +54,6 @@ export function LogisticsChecklist({ market, quantity = 50 }: LogisticsChecklist
   const totalRequired = LOGISTICS_CHECKLIST.filter(i => i.required).length;
   const requiredCompleted = LOGISTICS_CHECKLIST.filter(i => i.required && checked.has(i.id)).length;
   const progress = (requiredCompleted / totalRequired) * 100;
-
-  // Calculate recommended vehicle
-  const recommendedVehicle = TRANSPORT_RATES.find(t => t.capacity >= quantity) || TRANSPORT_RATES[TRANSPORT_RATES.length - 1];
 
   return (
     <div className="card-elevated p-6 space-y-5">
@@ -92,10 +104,6 @@ export function LogisticsChecklist({ market, quantity = 50 }: LogisticsChecklist
             <div className="flex justify-between">
               <span className="text-muted-foreground">Est. Travel Time</span>
               <span className="font-medium">{Math.ceil(market.distance / 40)} - {Math.ceil(market.distance / 30)} hours</span>
-            </div>
-            <div className="flex justify-between">
-              <span className="text-muted-foreground">Recommended Vehicle</span>
-              <span className="font-medium">{recommendedVehicle.vehicleType}</span>
             </div>
             <div className="flex justify-between">
               <span className="text-muted-foreground">Departure Time</span>

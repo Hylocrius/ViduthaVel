@@ -3,16 +3,17 @@ import { Sliders, Fuel, Warehouse, TrendingUp } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { Label } from "@/components/ui/label";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from "recharts";
-import type { CropType, StorageCondition, MarketData, TransportRate } from "@/lib/mockData";
-import { FUEL_PRICE_PER_LITER } from "@/lib/mockData";
+import type { CropInfo, StorageInfo, TransportInfo, MarketData } from "@/hooks/useMarketAnalysis";
 
 interface SensitivityAnalysisProps {
-  crop: CropType;
+  crop: CropInfo;
   quantity: number;
   market: MarketData;
-  transport: TransportRate;
-  storage: StorageCondition;
+  transport: TransportInfo;
+  storage: StorageInfo;
 }
+
+const FUEL_PRICE_PER_LITER = 105; // INR
 
 function formatCurrency(value: number): string {
   return new Intl.NumberFormat("en-IN", {
@@ -71,7 +72,6 @@ export function SensitivityAnalysis({
   ).day;
 
   // Find break-even day (where revenue starts declining from peak)
-  const peakRevenue = Math.max(...breakEvenData.map(d => d.netRevenue));
   const breakEvenDay = breakEvenData.findIndex((d, i) => 
     i > optimalDay && d.netRevenue < breakEvenData[optimalDay].netRevenue * 0.95
   );

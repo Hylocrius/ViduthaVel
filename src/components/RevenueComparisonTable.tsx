@@ -1,9 +1,9 @@
-import { ArrowRight, TrendingUp, TrendingDown, Minus } from "lucide-react";
+import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { RevenueComparison } from "@/lib/mockData";
+import type { AIRevenueComparison } from "@/hooks/useMarketAnalysis";
 
 interface RevenueComparisonTableProps {
-  comparisons: RevenueComparison[];
+  comparisons: AIRevenueComparison[];
   recommendedIndex?: number;
 }
 
@@ -16,14 +16,6 @@ function formatCurrency(value: number): string {
 }
 
 export function RevenueComparisonTable({ comparisons, recommendedIndex }: RevenueComparisonTableProps) {
-  // Group by market
-  const marketGroups = comparisons.reduce((acc, comp) => {
-    const key = comp.market.id;
-    if (!acc[key]) acc[key] = [];
-    acc[key].push(comp);
-    return acc;
-  }, {} as Record<string, RevenueComparison[]>);
-
   return (
     <div className="card-elevated overflow-hidden">
       <div className="p-6 border-b border-border">
@@ -33,7 +25,7 @@ export function RevenueComparisonTable({ comparisons, recommendedIndex }: Revenu
           </div>
           <div>
             <h2 className="font-display font-semibold">Net Revenue Comparison</h2>
-            <p className="text-xs text-muted-foreground">Now vs. +7 Days across markets</p>
+            <p className="text-xs text-muted-foreground">Real-time analysis: Now vs. +7 Days</p>
           </div>
         </div>
       </div>

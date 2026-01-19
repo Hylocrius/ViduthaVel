@@ -6,49 +6,33 @@ const corsHeaders = {
 };
 
 interface FarmContext {
-  crop: {
-    id: string;
-    name: string;
-    shelfLife: number;
-    lossRatePerDay: number;
-    basePrice: number;
-  };
+  crop: string;
   quantity: number;
   location: string;
-  storageCondition: {
-    type: string;
-    lossMultiplier: number;
-    costPerDay: number;
-  };
+  storageType: string;
 }
 
-interface MarketData {
-  id: string;
-  name: string;
-  location: string;
-  distance: number;
-  currentPrice: number;
-  projectedPrice7Days: number;
-  volatility: "low" | "medium" | "high";
-  demand: "low" | "medium" | "high";
-}
+const systemPrompt = `You are an expert agricultural market analyst AI assistant for Indian farmers. You provide real-time market analysis with REALISTIC current market data.
 
-interface TransportRate {
-  vehicleType: string;
-  ratePerKm: number;
-  capacity: number;
-}
-
-const systemPrompt = `You are an expert agricultural market analyst AI assistant. You help farmers make informed decisions about when and where to sell their crops.
-
-You analyze market conditions, transport costs, storage losses, and provide recommendations in JSON format.
+CRITICAL: Generate realistic, dynamic market data based on:
+1. Current seasonal trends for the crop
+2. Regional demand patterns in India
+3. Typical price ranges for Indian agricultural markets (mandis)
+4. Real market names and locations in India
 
 When analyzing, consider:
-1. Current market prices vs projected prices
-2. Transport costs based on distance
-3. Storage losses based on crop type and storage conditions
-4. Net revenue calculations
-5. Risk factors like price volatility
+1. Current estimated market prices based on crop type and season
+2. Price projections based on supply-demand dynamics
+3. Transport costs based on actual Indian road distances
+4. Storage losses based on crop characteristics
+5. Net revenue calculations with realistic numbers
+
+IMPORTANT GUIDELINES:
+- Use realistic INR prices per quintal for Indian markets
+- Include actual major mandis like Azadpur (Delhi), Vashi (Mumbai), Koyambedu (Chennai), etc.
+- Generate 4-6 markets with varying distances from the farmer's location
+- Prices should vary by market based on local demand and supply
+- Include volatility based on crop type (perishables = high, grains = low)
 
 Always provide practical, actionable advice that maximizes farmer's net revenue.
 
@@ -60,44 +44,82 @@ serve(async (req) => {
   }
 
   try {
-    const { farmContext, markets, transportRates } = await req.json() as {
+    const { farmContext } = await req.json() as {
       farmContext: FarmContext;
-      markets: MarketData[];
-      transportRates: TransportRate[];
     };
+
+    console.log("Received farm context:", farmContext);
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    const transport = transportRates.find(t => t.capacity >= farmContext.quantity) || transportRates[0];
+    const currentDate = new Date().toLocaleDateString('en-IN', { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
 
-    const userPrompt = `Analyze the following farm context and provide market recommendations:
+    const userPrompt = `Generate a COMPLETE real-time market analysis for an Indian farmer with the following context:
+
+## Current Date: ${currentDate}
 
 ## Farm Context
-- Crop: ${farmContext.crop.name}
+- Crop: ${farmContext.crop}
 - Quantity: ${farmContext.quantity} quintals
-- Location: ${farmContext.location}
-- Storage: ${farmContext.storageCondition.type} (loss multiplier: ${farmContext.storageCondition.lossMultiplier}x, cost: ₹${farmContext.storageCondition.costPerDay}/day/quintal)
-- Crop shelf life: ${farmContext.crop.shelfLife} days
-- Base loss rate: ${farmContext.crop.lossRatePerDay}% per day
+- Farmer Location: ${farmContext.location}
+- Storage Available: ${farmContext.storageType}
 
-## Available Markets
-${markets.map(m => `- ${m.name} (${m.location}): ₹${m.currentPrice}/quintal now, ₹${m.projectedPrice7Days}/quintal projected in 7 days, Distance: ${m.distance}km, Volatility: ${m.volatility}, Demand: ${m.demand}`).join('\n')}
+Based on CURRENT MARKET CONDITIONS and seasonal factors for ${farmContext.crop}, generate:
 
-## Transport
-- Vehicle: ${transport.vehicleType}
-- Rate: ₹${transport.ratePerKm}/km
-- Capacity: ${transport.capacity} quintals
+1. **Real-time market data** for 4-6 major Indian mandis/markets with:
+   - Realistic current prices based on today's typical rates
+   - 7-day price projections based on market trends
+   - Estimated distances from ${farmContext.location}
+   - Demand levels (low/medium/high)
+   - Price volatility (low/medium/high)
 
-Provide a complete analysis in this exact JSON structure:
+2. **Complete analysis** with agent reasoning steps
+
+3. **Revenue calculations** for each market with both "sell now" and "sell in 7 days" scenarios
+
+Provide the analysis in this exact JSON structure:
 {
+  "generatedMarkets": [
+    {
+      "id": "market-id",
+      "name": "Market Name",
+      "location": "City",
+      "distance": number,
+      "currentPrice": number,
+      "projectedPrice7Days": number,
+      "volatility": "low" | "medium" | "high",
+      "demand": "low" | "medium" | "high"
+    }
+  ],
+  "cropInfo": {
+    "name": "${farmContext.crop}",
+    "shelfLife": number,
+    "lossRatePerDay": number,
+    "basePrice": number
+  },
+  "storageInfo": {
+    "type": "${farmContext.storageType}",
+    "lossMultiplier": number,
+    "costPerDay": number
+  },
+  "transportInfo": {
+    "vehicleType": "string",
+    "ratePerKm": number,
+    "capacity": number
+  },
   "agentSteps": [
     {
       "agent": "market" | "logistics" | "storage" | "supervisor",
       "action": "brief action description",
-      "reasoning": "detailed reasoning with specific numbers"
+      "reasoning": "detailed reasoning with specific numbers and real-time insights"
     }
   ],
   "comparisons": [
@@ -120,12 +142,25 @@ Provide a complete analysis in this exact JSON structure:
   "recommendation": {
     "bestMarketId": "market-id",
     "bestScenario": "now" | "7days",
-    "reasoning": "explanation of why this is the best option",
-    "riskWarning": "optional warning about risks"
+    "reasoning": "detailed explanation of why this is the best option with specific numbers",
+    "riskWarning": "optional warning about risks based on current market conditions"
+  },
+  "marketInsights": {
+    "seasonalTrend": "description of current seasonal trends",
+    "demandOutlook": "description of demand outlook",
+    "priceVolatility": "description of price volatility factors"
   }
 }
 
-Generate entries for each market with both "now" and "7days" scenarios. Calculate actual numbers based on the data provided.`;
+Generate entries for each market with BOTH "now" and "7days" scenarios. Calculate actual numbers based on realistic market conditions for ${farmContext.crop} in India today.
+
+IMPORTANT: 
+- Use realistic prices (e.g., Wheat: ₹2000-2500/quintal, Rice: ₹2000-2400/quintal, Tomato: ₹1500-4000/quintal depending on season, Onion: ₹1000-3000/quintal, Potato: ₹800-1500/quintal, Soybean: ₹4000-5500/quintal)
+- Transport rates should be ₹15-40 per km depending on vehicle type
+- Storage costs: Open Air ₹0, Covered Shed ₹2-3, Warehouse ₹4-6, Cold Storage ₹12-18 per quintal per day
+- Loss rates vary by crop: Grains 0.05-0.1%/day, Vegetables 2-5%/day`;
+
+    console.log("Sending request to AI gateway...");
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -139,7 +174,7 @@ Generate entries for each market with both "now" and "7days" scenarios. Calculat
           { role: "system", content: systemPrompt },
           { role: "user", content: userPrompt },
         ],
-        temperature: 0.3,
+        temperature: 0.4,
       }),
     });
 
@@ -167,6 +202,8 @@ Generate entries for each market with both "now" and "7days" scenarios. Calculat
     const aiResponse = await response.json();
     const content = aiResponse.choices?.[0]?.message?.content;
 
+    console.log("AI response received, parsing...");
+
     if (!content) {
       throw new Error("No content in AI response");
     }
@@ -184,6 +221,8 @@ Generate entries for each market with both "now" and "7days" scenarios. Calculat
     cleanContent = cleanContent.trim();
 
     const analysis = JSON.parse(cleanContent);
+
+    console.log("Analysis complete, returning response");
 
     return new Response(JSON.stringify(analysis), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
