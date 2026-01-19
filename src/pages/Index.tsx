@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState } from "react";
 import { Header } from "@/components/Header";
 import { FarmContextForm, type FarmContext } from "@/components/FarmContextForm";
 import { AgentTracePanel } from "@/components/AgentTracePanel";
@@ -7,83 +7,27 @@ import { RecommendationCard } from "@/components/RecommendationCard";
 import { LogisticsChecklist } from "@/components/LogisticsChecklist";
 import { RiskAnalysisPanel } from "@/components/RiskAnalysisPanel";
 import { SensitivityAnalysis } from "@/components/SensitivityAnalysis";
-import { 
-  MARKETS, 
-  TRANSPORT_RATES,
-  generateAgentSteps,
-  calculateRevenueComparison,
-  type AgentStep,
-  type RevenueComparison,
-} from "@/lib/mockData";
-import { Sprout, TrendingUp, Truck, BarChart3 } from "lucide-react";
+import { useMarketAnalysis } from "@/hooks/useMarketAnalysis";
+import { MARKETS, TRANSPORT_RATES } from "@/lib/mockData";
+import { Sprout, TrendingUp, Truck, BarChart3, Sparkles } from "lucide-react";
 
 export default function Index() {
   const [farmContext, setFarmContext] = useState<FarmContext | null>(null);
-  const [agentSteps, setAgentSteps] = useState<AgentStep[]>([]);
-  const [comparisons, setComparisons] = useState<RevenueComparison[]>([]);
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
-  const [recommendedIndex, setRecommendedIndex] = useState<number | undefined>();
+  const {
+    agentSteps,
+    comparisons,
+    isAnalyzing,
+    recommendedIndex,
+    bestOption,
+    secondBest,
+    riskWarning,
+    analyzeMarket,
+  } = useMarketAnalysis();
 
-  const handleAnalyze = useCallback(async (context: FarmContext) => {
+  const handleAnalyze = async (context: FarmContext) => {
     setFarmContext(context);
-    setIsAnalyzing(true);
-    setAgentSteps([]);
-    setComparisons([]);
-
-    // Simulate agent processing with delays
-    const steps = generateAgentSteps(
-      context.crop,
-      context.quantity,
-      MARKETS,
-      context.storageCondition
-    );
-
-    // Animate steps appearing
-    for (let i = 0; i < steps.length; i++) {
-      await new Promise(resolve => setTimeout(resolve, 400));
-      setAgentSteps(prev => [...prev, steps[i]]);
-    }
-
-    // Calculate all comparisons
-    const transport = TRANSPORT_RATES.find(t => t.capacity >= context.quantity) || TRANSPORT_RATES[0];
-    const allComparisons: RevenueComparison[] = [];
-
-    for (const market of MARKETS) {
-      allComparisons.push(
-        calculateRevenueComparison(
-          context.crop,
-          context.quantity,
-          market,
-          transport,
-          context.storageCondition,
-          "now"
-        ),
-        calculateRevenueComparison(
-          context.crop,
-          context.quantity,
-          market,
-          transport,
-          context.storageCondition,
-          "7days"
-        )
-      );
-    }
-
-    // Find best option
-    const bestIndex = allComparisons.reduce(
-      (best, current, index) => current.netRevenue > allComparisons[best].netRevenue ? index : best,
-      0
-    );
-
-    setComparisons(allComparisons);
-    setRecommendedIndex(bestIndex);
-    setIsAnalyzing(false);
-  }, []);
-
-  const bestOption = recommendedIndex !== undefined ? comparisons[recommendedIndex] : null;
-  const secondBest = comparisons
-    .filter((_, i) => i !== recommendedIndex)
-    .sort((a, b) => b.netRevenue - a.netRevenue)[0];
+    await analyzeMarket(context);
+  };
 
   const selectedTransport = farmContext 
     ? TRANSPORT_RATES.find(t => t.capacity >= farmContext.quantity) || TRANSPORT_RATES[0]
@@ -97,8 +41,8 @@ export default function Index() {
         {/* Hero section */}
         <section className="text-center py-8 animate-fade-in">
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 text-primary text-sm font-medium mb-4">
-            <span className="pulse-dot" />
-            AI-Powered Decision Support
+            <Sparkles className="h-4 w-4" />
+            Real AI-Powered Analysis
           </div>
           <h1 className="font-display text-3xl sm:text-4xl lg:text-5xl font-bold text-balance gradient-text mb-4">
             Maximize Your Harvest Returns
@@ -115,7 +59,7 @@ export default function Index() {
             { icon: Sprout, label: "Crops Tracked", value: "6+", color: "text-primary" },
             { icon: TrendingUp, label: "Markets Analyzed", value: "4", color: "text-success" },
             { icon: Truck, label: "Transport Options", value: "4", color: "text-agent-logistics" },
-            { icon: BarChart3, label: "Factors Considered", value: "15+", color: "text-accent" },
+            { icon: BarChart3, label: "AI Factors", value: "15+", color: "text-accent" },
           ].map((stat, i) => (
             <div key={i} className="stat-card text-center animate-fade-in" style={{ animationDelay: `${i * 100}ms` }}>
               <stat.icon className={`h-6 w-6 mx-auto mb-2 ${stat.color}`} />
@@ -143,11 +87,11 @@ export default function Index() {
                   <RecommendationCard 
                     bestOption={bestOption}
                     secondBest={secondBest}
-                    volatilityWarning={
+                    volatilityWarning={riskWarning || (
                       bestOption.market.volatility === "high" 
                         ? `${bestOption.market.name} has high price volatility. Consider monitoring prices closely.`
                         : undefined
-                    }
+                    )}
                   />
                 </div>
               )}
@@ -201,10 +145,10 @@ export default function Index() {
             Built for <span className="font-semibold">AI Ignite National Gen AI Hackathon</span>
           </p>
           <p>
-            Data sources: FAO Post-Harvest Guidelines, ICAR Research Publications
+            Powered by <span className="font-semibold text-primary">Lovable AI</span> • Data sources: FAO Post-Harvest Guidelines, ICAR Research Publications
           </p>
           <p className="mt-4 text-xs max-w-xl mx-auto">
-            Disclaimer: This tool provides estimates based on simulated data. 
+            Disclaimer: This tool provides AI-generated estimates based on market data. 
             Always verify current market prices before making selling decisions.
           </p>
         </footer>
