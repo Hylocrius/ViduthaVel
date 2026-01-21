@@ -19,13 +19,15 @@ CRITICAL: Generate realistic, dynamic market data based on:
 2. Regional demand patterns in India
 3. Typical price ranges for Indian agricultural markets (mandis)
 4. Real market names and locations in India
+5. Current weather conditions and their impact on transport/storage
 
 When analyzing, consider:
 1. Current estimated market prices based on crop type and season
 2. Price projections based on supply-demand dynamics
 3. Transport costs based on actual Indian road distances
-4. Storage losses based on crop characteristics
+4. Storage losses based on crop characteristics and weather
 5. Net revenue calculations with realistic numbers
+6. Weather impact on transport routes and storage conditions
 
 IMPORTANT GUIDELINES:
 - Use realistic INR prices per quintal for Indian markets
@@ -33,6 +35,7 @@ IMPORTANT GUIDELINES:
 - Generate 4-6 markets with varying distances from the farmer's location
 - Prices should vary by market based on local demand and supply
 - Include volatility based on crop type (perishables = high, grains = low)
+- Factor in monsoon, summer heat, or winter conditions based on current season
 
 Always provide practical, actionable advice that maximizes farmer's net revenue.
 
@@ -62,9 +65,14 @@ serve(async (req) => {
       day: 'numeric' 
     });
 
+    const currentMonth = new Date().getMonth();
+    const season = currentMonth >= 5 && currentMonth <= 9 ? "monsoon" : 
+                   currentMonth >= 10 || currentMonth <= 1 ? "winter" : "summer";
+
     const userPrompt = `Generate a COMPLETE real-time market analysis for an Indian farmer with the following context:
 
 ## Current Date: ${currentDate}
+## Current Season: ${season}
 
 ## Farm Context
 - Crop: ${farmContext.crop}
@@ -72,7 +80,7 @@ serve(async (req) => {
 - Farmer Location: ${farmContext.location}
 - Storage Available: ${farmContext.storageType}
 
-Based on CURRENT MARKET CONDITIONS and seasonal factors for ${farmContext.crop}, generate:
+Based on CURRENT MARKET CONDITIONS, WEATHER, and seasonal factors for ${farmContext.crop}, generate:
 
 1. **Real-time market data** for 4-6 major Indian mandis/markets with:
    - Realistic current prices based on today's typical rates
@@ -84,6 +92,10 @@ Based on CURRENT MARKET CONDITIONS and seasonal factors for ${farmContext.crop},
 2. **Complete analysis** with agent reasoning steps
 
 3. **Revenue calculations** for each market with both "sell now" and "sell in 7 days" scenarios
+
+4. **Weather data** for the farmer's location and target markets
+
+5. **Price history** for the past 30 days (daily simulated prices)
 
 Provide the analysis in this exact JSON structure:
 {
@@ -115,9 +127,44 @@ Provide the analysis in this exact JSON structure:
     "ratePerKm": number,
     "capacity": number
   },
+  "weatherData": {
+    "location": "${farmContext.location}",
+    "current": {
+      "condition": "sunny" | "cloudy" | "rainy" | "stormy" | "foggy" | "hot",
+      "temperature": number,
+      "humidity": number,
+      "rainfall": number
+    },
+    "forecast": [
+      {
+        "day": number,
+        "condition": "sunny" | "cloudy" | "rainy" | "stormy" | "foggy" | "hot",
+        "temperature": number,
+        "humidity": number,
+        "rainfall": number
+      }
+    ],
+    "transportImpact": {
+      "severity": "none" | "low" | "moderate" | "high" | "severe",
+      "description": "Description of how weather affects transport",
+      "delayRisk": number
+    },
+    "storageImpact": {
+      "severity": "none" | "low" | "moderate" | "high" | "severe",
+      "description": "Description of how weather affects storage",
+      "additionalLossRate": number
+    }
+  },
+  "priceHistory": [
+    {
+      "date": "YYYY-MM-DD",
+      "price": number,
+      "volume": number
+    }
+  ],
   "agentSteps": [
     {
-      "agent": "market" | "logistics" | "storage" | "supervisor",
+      "agent": "market" | "logistics" | "storage" | "supervisor" | "weather",
       "action": "brief action description",
       "reasoning": "detailed reasoning with specific numbers and real-time insights"
     }
@@ -142,8 +189,8 @@ Provide the analysis in this exact JSON structure:
   "recommendation": {
     "bestMarketId": "market-id",
     "bestScenario": "now" | "7days",
-    "reasoning": "detailed explanation of why this is the best option with specific numbers",
-    "riskWarning": "optional warning about risks based on current market conditions"
+    "reasoning": "detailed explanation of why this is the best option with specific numbers and weather considerations",
+    "riskWarning": "optional warning about risks based on current market and weather conditions"
   },
   "marketInsights": {
     "seasonalTrend": "description of current seasonal trends",
@@ -158,7 +205,10 @@ IMPORTANT:
 - Use realistic prices (e.g., Wheat: ₹2000-2500/quintal, Rice: ₹2000-2400/quintal, Tomato: ₹1500-4000/quintal depending on season, Onion: ₹1000-3000/quintal, Potato: ₹800-1500/quintal, Soybean: ₹4000-5500/quintal)
 - Transport rates should be ₹15-40 per km depending on vehicle type
 - Storage costs: Open Air ₹0, Covered Shed ₹2-3, Warehouse ₹4-6, Cold Storage ₹12-18 per quintal per day
-- Loss rates vary by crop: Grains 0.05-0.1%/day, Vegetables 2-5%/day`;
+- Loss rates vary by crop: Grains 0.05-0.1%/day, Vegetables 2-5%/day
+- Generate realistic price history for the past 30 days with natural fluctuations
+- Weather should match the ${season} season in ${farmContext.location}
+- Include a weather agent step that analyzes weather impact on transport and storage`;
 
     console.log("Sending request to AI gateway...");
 

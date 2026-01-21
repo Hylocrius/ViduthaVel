@@ -1,10 +1,10 @@
 import { useState } from "react";
-import { Bot, ChevronDown, ChevronRight, TrendingUp, Truck, Warehouse, Brain } from "lucide-react";
+import { Bot, ChevronDown, ChevronRight, TrendingUp, Truck, Warehouse, Brain, Cloud } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { AgentStep } from "@/lib/mockData";
+import type { AIAgentStep } from "@/hooks/useMarketAnalysis";
 
 interface AgentTracePanelProps {
-  steps: AgentStep[];
+  steps: AIAgentStep[];
   isRunning?: boolean;
 }
 
@@ -28,6 +28,11 @@ const agentConfig = {
     icon: Brain,
     label: "Supervisor Agent",
     badgeClass: "agent-badge-supervisor",
+  },
+  weather: {
+    icon: Cloud,
+    label: "Weather Analyst",
+    badgeClass: "agent-badge-logistics",
   },
 };
 
