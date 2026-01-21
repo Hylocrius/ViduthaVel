@@ -3,7 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 export interface AIAgentStep {
-  agent: "market" | "logistics" | "storage" | "supervisor";
+  agent: "market" | "logistics" | "storage" | "supervisor" | "weather";
   action: string;
   reasoning: string;
   timestamp: Date;
@@ -57,6 +57,42 @@ export interface MarketInsights {
   priceVolatility: string;
 }
 
+export interface WeatherCurrent {
+  condition: "sunny" | "cloudy" | "rainy" | "stormy" | "foggy" | "hot";
+  temperature: number;
+  humidity: number;
+  rainfall: number;
+}
+
+export interface WeatherForecast {
+  day: number;
+  condition: "sunny" | "cloudy" | "rainy" | "stormy" | "foggy" | "hot";
+  temperature: number;
+  humidity: number;
+  rainfall: number;
+}
+
+export interface WeatherImpact {
+  severity: "none" | "low" | "moderate" | "high" | "severe";
+  description: string;
+  delayRisk?: number;
+  additionalLossRate?: number;
+}
+
+export interface WeatherData {
+  location: string;
+  current: WeatherCurrent;
+  forecast: WeatherForecast[];
+  transportImpact: WeatherImpact;
+  storageImpact: WeatherImpact;
+}
+
+export interface PriceHistoryEntry {
+  date: string;
+  price: number;
+  volume?: number;
+}
+
 export interface FarmContextInput {
   crop: string;
   quantity: number;
@@ -69,8 +105,10 @@ interface AIAnalysisResponse {
   cropInfo: CropInfo;
   storageInfo: StorageInfo;
   transportInfo: TransportInfo;
+  weatherData?: WeatherData;
+  priceHistory?: PriceHistoryEntry[];
   agentSteps: Array<{
-    agent: "market" | "logistics" | "storage" | "supervisor";
+    agent: "market" | "logistics" | "storage" | "supervisor" | "weather";
     action: string;
     reasoning: string;
   }>;
@@ -109,6 +147,8 @@ export function useMarketAnalysis() {
   const [storageInfo, setStorageInfo] = useState<StorageInfo | null>(null);
   const [transportInfo, setTransportInfo] = useState<TransportInfo | null>(null);
   const [marketInsights, setMarketInsights] = useState<MarketInsights | null>(null);
+  const [weatherData, setWeatherData] = useState<WeatherData | null>(null);
+  const [priceHistory, setPriceHistory] = useState<PriceHistoryEntry[]>([]);
 
   const analyzeMarket = useCallback(async (context: FarmContextInput) => {
     setIsAnalyzing(true);
@@ -121,6 +161,8 @@ export function useMarketAnalysis() {
     setStorageInfo(null);
     setTransportInfo(null);
     setMarketInsights(null);
+    setWeatherData(null);
+    setPriceHistory([]);
 
     try {
       // Add initial step to show we're starting
@@ -158,6 +200,8 @@ export function useMarketAnalysis() {
       setStorageInfo(analysis.storageInfo || null);
       setTransportInfo(analysis.transportInfo || null);
       setMarketInsights(analysis.marketInsights || null);
+      setWeatherData(analysis.weatherData || null);
+      setPriceHistory(analysis.priceHistory || []);
 
       // Animate agent steps appearing
       const steps: AIAgentStep[] = analysis.agentSteps.map((step, index) => ({
@@ -254,11 +298,13 @@ export function useMarketAnalysis() {
     secondBest,
     riskWarning,
     analyzeMarket,
-    // New real-time data
+    // Real-time data
     markets,
     cropInfo,
     storageInfo,
     transportInfo,
     marketInsights,
+    weatherData,
+    priceHistory,
   };
 }

@@ -8,8 +8,10 @@ import { LogisticsChecklist } from "@/components/LogisticsChecklist";
 import { RiskAnalysisPanel } from "@/components/RiskAnalysisPanel";
 import { SensitivityAnalysis } from "@/components/SensitivityAnalysis";
 import { MarketInsightsPanel } from "@/components/MarketInsightsPanel";
+import { WeatherPanel } from "@/components/WeatherPanel";
+import { PriceHistoryChart } from "@/components/PriceHistoryChart";
 import { useMarketAnalysis } from "@/hooks/useMarketAnalysis";
-import { Sprout, TrendingUp, Truck, BarChart3, Sparkles, Wifi } from "lucide-react";
+import { Sprout, TrendingUp, Truck, BarChart3, Wifi } from "lucide-react";
 
 export default function Index() {
   const [farmContext, setFarmContext] = useState<FarmContext | null>(null);
@@ -27,6 +29,8 @@ export default function Index() {
     storageInfo,
     transportInfo,
     marketInsights,
+    weatherData,
+    priceHistory,
   } = useMarketAnalysis();
 
   const handleAnalyze = async (context: FarmContext) => {
@@ -78,9 +82,23 @@ export default function Index() {
         {/* Results section */}
         {(agentSteps.length > 0 || comparisons.length > 0) && (
           <section id="analysis" className="space-y-6">
+            {/* Weather Panel */}
+            {weatherData && (
+              <div className="animate-fade-in">
+                <WeatherPanel weather={weatherData} />
+              </div>
+            )}
+
+            {/* Price History Chart */}
+            {priceHistory && priceHistory.length > 0 && (
+              <div className="animate-fade-in" style={{ animationDelay: "100ms" }}>
+                <PriceHistoryChart priceHistory={priceHistory} cropName={cropInfo?.name} />
+              </div>
+            )}
+
             {/* Market Insights Panel */}
             {marketInsights && (
-              <div className="animate-fade-in">
+              <div className="animate-fade-in" style={{ animationDelay: "200ms" }}>
                 <MarketInsightsPanel insights={marketInsights} cropName={cropInfo?.name} />
               </div>
             )}
